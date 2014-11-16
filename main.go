@@ -23,17 +23,17 @@ func readBytes(path string) []byte {
 	return bytes
 }
 
-func mapBytes(bytes []byte) [][]int {
-	byteMap := make([][]int, 256)
-	for i := range byteMap {
-		byteMap[i] = make([]int, 256)
+func countFreq(bytes []byte) [][]int {
+	freq := make([][]int, 256)
+	for i := range freq {
+		freq[i] = make([]int, 256)
 	}
 
 	for i := 0; i < len(bytes) - 1; i++ {
-		byteMap[bytes[i]][bytes[i + 1]] += 1
+		freq[bytes[i]][bytes[i + 1]] += 1
 	}
 
-	return byteMap
+	return freq
 }
 
 func Max(a, b int) int {
@@ -50,13 +50,13 @@ func Min(a, b int) int {
 	return b
 }
 
-func transformByteMap(byteMap [][]int) [][]int {
-	max := byteMap[0][0]
-	min := byteMap[0][0]
+func transformFreq(freq [][]int) [][]int {
+	max := freq[0][0]
+	min := freq[0][0]
 	for x := 0; x < 256; x++ {
 		for y := 0; y < 256; y++ {
-			max = Max(max, byteMap[x][y])
-			min = Min(min, byteMap[x][y])
+			max = Max(max, freq[x][y])
+			min = Min(min, freq[x][y])
 		}
 	}
 
@@ -64,41 +64,41 @@ func transformByteMap(byteMap [][]int) [][]int {
 		panic("min == max")
 	}
 
-	heightMap := make(map[int]int)
+	colorMap := make(map[int]int)
 	for x := 0; x < 256; x++ {
 		for y := 0; y < 256; y++ {
-			heightMap[byteMap[x][y]] = 0
+			colorMap[freq[x][y]] = 0
 		}
 	}
 
 	var heights []int
-	for key := range heightMap {
+	for key := range colorMap {
 		heights = append(heights, key)
 	}
 	sort.Ints(heights)
 
 	step := 256.0 / float32(len(heights))
 	for i, height := range heights {
-		heightMap[height] = int(step * float32(i))
+		colorMap[height] = int(step * float32(i))
 	}
 
 	for x := 0; x < 256; x++ {
 		for y := 0; y < 256; y++ {
-			byteMap[x][y] = heightMap[byteMap[x][y]]
+			freq[x][y] = colorMap[freq[x][y]]
 		}
 	}
 
-	return byteMap
+	return freq
 }
 
-func convertByteMap(byteMap [][]int) image.Image {
+func convertFreq(freq [][]int) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, 256, 256))
 	draw.Draw(img, img.Bounds(),
 		&image.Uniform{color.Black}, image.ZP, draw.Src)
 
 	for x := 0; x < 256; x++ {
 		for y := 0; y < 256; y++ {
-			colorValue := uint8(byteMap[x][y])
+			colorValue := uint8(freq[x][y])
 			img.Set(x, y, color.RGBA{colorValue,
 				colorValue, colorValue, 255})
 		}
@@ -124,8 +124,8 @@ func main() {
 	}
 
 	bytes := readBytes(os.Args[1])
-	byteMap := mapBytes(bytes)
-	byteMap = transformByteMap(byteMap)
-	img := convertByteMap(byteMap)
+	freq := countFreq(bytes)
+	freq = transformFreq(freq)
+	img := convertFreq(freq)
 	saveImage(img, os.Args[2])
 }
