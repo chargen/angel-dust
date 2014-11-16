@@ -10,51 +10,65 @@ import (
 	"image/png"
 )
 
-func print_usage() {
-	fmt.Printf("Usage: go run main.go <input_file> <output_image>\n",
-		os.Args[0])
+func printUsage() {
+	fmt.Println("Usage: go run main.go <input_file> <output_image>")
 }
 
-func main() {
-	if len(os.Args) != 3 {
-		print_usage()
-		return
-	}
-
-	input := os.Args[1]
-	output := os.Args[2]
-
-	bytes, err := ioutil.ReadFile(input)
+func readBytes(path string) []byte {
+	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
+	return bytes
+}
 
-	byte_map := make([][]int, 256)
-	for i := range byte_map {
-		byte_map[i] = make([]int, 256)
+func mapBytes(bytes []byte) [][]int {
+	byteMap := make([][]int, 256)
+	for i := range byteMap {
+		byteMap[i] = make([]int, 256)
 	}
 
 	for i := 0; i < len(bytes) - 1; i++ {
-		byte_map[bytes[i]][bytes[i + 1]] += 1
+		byteMap[bytes[i]][bytes[i + 1]] += 1
 	}
 
+	return byteMap
+}
+
+func convertByteMap(byteMap [][]int) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, 256, 256))
 	draw.Draw(img, img.Bounds(),
 		&image.Uniform{color.Black}, image.ZP, draw.Src)
 
 	for x := 0; x < 256; x++ {
 		for y := 0; y < 256; y++ {
-			if byte_map[x][y] > 0 {
+			if byteMap[x][y] > 0 {
 				img.Set(x, y, color.RGBA{255, 255, 255, 255})
 			}
 		}
 	}
 
-	output_file, err := os.Create(output)
+	return img
+}
+
+func saveImage(img image.Image, path string) {
+	output, err := os.Create(path)
 	if err != nil {
 		panic(err)
 	}
-	defer output_file.Close()
+	defer output.Close()
 
-	png.Encode(output_file, img)
+	png.Encode(output, img)
+}
+
+func main() {
+	if len(os.Args) != 3 {
+		printUsage()
+		return
+	}
+
+	bytes := readBytes(os.Args[1])
+	byteMap := mapBytes(bytes)
+	img := convertByteMap(byteMap)
+	saveImage(img, os.Args[2])
 }
